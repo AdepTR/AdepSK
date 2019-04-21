@@ -1,0 +1,125 @@
+#Version: v0.1
+#Don't change these (^*) lines!
+import:
+	java.nio.file.Files
+	java.nio.file.Paths
+	java.io.File
+	java.io.BufferedReader
+	java.io.InputStreamReader
+	java.net.URL
+	java.lang.System
+	org.bukkit.Bukkit
+	ch.njol.skript.ScriptLoader
+	me.clip.placeholderapi.PlaceholderAPI
+expression text of url %text% [line %-integer%]:
+	get:
+		set {_in} to new BufferedReader(new InputStreamReader(new URL(expression 1).openStream()))
+		while true:
+			add 1 to {_count}
+			set {_return::%{_count}%} to {_in}.readLine()
+			if {_return::%{_count}%} isn't set:
+				stop loop
+			if {_count} is expression-2:
+				{_in}.close()
+				return {_return::%{_count}%}
+		{_in}.close()
+		return {_return::*}
+expression placeholder parsed %$strings% [from %-player%]:
+	return type: string
+	get:
+		loop expressions-1:
+			add PlaceholderAPI.setPlaceholders(expression-2, loop-value) to {_return::*}
+		return {_return::*}
+load:
+	execute console command "adepsk reload"
+command /adepsk [<text="help">] [<text>] [<text>] [<text>]:
+	trigger:
+		if executor has permission "%{AdepSK::adminPerm}%":
+			if arg-1 is "help":
+				send "%{AdepSK::helpCMD::*}%"
+			else if arg-1 is "reload" or "rl":
+				if arg-2 isn't set:
+					set {_systemMS} to current system milliseconds
+					if dir "plugins/AdepSK/" doesn't exist:
+						create dir "plugins/AdepSK/Oyuncular/" 
+						set file contents of "plugins/AdepSK/Oyuncular/AdepTR.yml" to text of url "https://raw.githubusercontent.com/AdepTR/AdepSK/master/config.yml"
+						set file contents of "plugins/AdepSK/config.yml" to text of url "https://raw.githubusercontent.com/AdepTR/AdepSK/master/config.yml"	
+					execute executor command "adepsk reload config"
+					if line 1 in file "plugins/Skript/scripts/%script's name%.sk" isn't text of url "https://raw.githubusercontent.com/AdepTR/AdepSK/master/AdepSK.sk" line 1:
+						send "%{AdepSK::prefix}% &cYou're running with outdated version of AdepSK." and "%{AdepSK::prefix}% &cPlease update from &ehttps://github.com/AdepTR/AdepSK/releases" to executor
+						if executor is a player:
+							send "%{AdepSK::prefix}% &2&n<cmd:/adepsk update>Click here for directly update system!" and nl to executor
+						else:
+							send "%{AdepSK::prefix}% &2You can directly update this system in game with command &8""&2/adepsk update&8""&2."
+					else:
+						send "%{AdepSK::prefix}% &2You're running with latest version of AdepSK." and "%{AdepSK::prefix}% &2Thanks!" to executor
+					loop files in directory "plugins/AdepSK/Oyuncular":
+						if first character of name of file loop-value isn't "-":
+							load yaml "plugins/AdepSK/Oyuncular/%name of file loop-value%.yml" as "AdepSK/Oyuncular/%name of file loop-value%.yml"
+							save yaml "AdepSK/Oyuncular/%name of file loop-value%.yml" without extra lines between nodes
+							add 1 to {_guiAmount}
+					loop loaded yaml:
+						if loop-value contains "AdepSK/Oyuncular/":
+							if file "plugins/%loop-value%" doesn't exist:
+								unload yaml loop-value
+					send "%{AdepSK::prefix}% &2Succesfully reloaded with &e%{_guiAmount}% &2GUI. &8(&e%difference between {_systemMS} and current system milliseconds% ms&8)" to executor
+				else if yaml "AdepSK/Oyuncular/%arg-2%.yml" is loaded:
+					load yaml "plugins/AdepSK/Oyuncular/%arg-2%.yml" as "AdepSK/Oyuncular/%arg-2%.yml"
+					save yaml "AdepSK/Oyuncular/%arg-2%.yml" without extra lines between nodes
+					send "%{AdepSK::prefix}% &2GUI &e%arg-2% &2is succesfully reloaded." to executor
+				else if arg-2 is "config":
+					load yaml "plugins/AdepSK/config.yml" as "AdepSK/config"
+					save yaml "AdepSK/config" without extra lines between nodes
+					set {AdepSK::adminPerm} to yaml value "admin-permission" from "AdepSK/config"
+					set {AdepSK::prefix} to yaml value "prefix" from "AdepSK/config"
+					set {AdepSK::noPermMSG} to yaml value "no-permission-message" from "AdepSK/config"
+					set {AdepSK::helpCMD::*} to colored join yaml list "help-command" from "AdepSK/config" with nl
+					replace "%%prefix%%" with {AdepSK::prefix} in {AdepSK::noPermMSG}
+					replace "%%prefix%%" with {AdepSK::prefix} in {AdepSK::helpCMD::*}
+					send "%{AdepSK::prefix}% &eConfig &2is succesfully reloaded."
+				else:
+					send "%{AdepSK::prefix}% &cThere is no GUI with this ID."
+			else if arg-1 is "disable":
+				if yaml "AdepSK/Oyuncular/%arg-2%.yml" is loaded:
+					save yaml "AdepSK/Oyuncular/%arg-2%.yml"
+					unload yaml "AdepSK/Oyuncular/%arg-2%.yml"
+					set {_name} to name of file "plugins/AdepSK/Oyuncular/%arg-2%.yml"
+					rename file "plugins/AdepSK/Oyuncular/%arg-2%.yml" to "-%{_name}%.yml"
+					send "%{AdepSK::prefix}% &2GUI &e%arg-2% &2succesfully disabled."
+				else:
+					send "%{AdepSK::prefix}% &cThere is no GUI with this ID."
+			else if arg-1 is "enable":
+				if yaml "AdepSK/Oyuncular/%arg-2%.yml" isn't loaded:
+					if file "plugins/AdepSK/Oyuncular/-%arg-2%.yml" exists:
+						set {_name} to name of file "plugins/AdepSK/Oyuncular/-%arg-2%.yml"
+						replace "-" with "" in {_name}
+						rename file "plugins/AdepSK/Oyuncular/-%arg-2%.yml" to "%{_name}%.yml"
+						load yaml "plugins/AdepSK/Oyuncular/%arg-2%.yml" as "AdepSK/Oyuncular/%arg-2%.yml"
+						save yaml "AdepSK/Oyuncular/%arg-2%.yml"
+						send "%{AdepSK::prefix}% &2GUI &e%arg-2% &2succesfully enabled."
+					else:
+						send "%{AdepSK::prefix}% &cThere is no GUI with this ID."
+				else:
+					send "%{AdepSK::prefix}% &cThere is already a GUI with this ID."
+			else if arg-1 is "update":
+				if line 1 in file "plugins/Skript/scripts/%script's name%.sk" isn't text of url "https://raw.githubusercontent.com/AdepTR/AdepSK/master/AdepSK.sk" line 1:
+					set {_systemMS} to current system milliseconds
+					set {_fileName} to line 1 in file "plugins/Skript/scripts/%script's name%.sk"
+					replace "##Version: " with "" in {_fileName}
+					create directory "plugins/AdepSK/backups"
+					set file contents of "plugins/AdepSK/backups/AdepSK (%{_fileName}%).sk" to file contents of "plugins/Skript/scripts/%script's name%.sk"
+					set file contents of "plugins/Skript/scripts/%script's name%.sk" to text of url "https://raw.githubusercontent.com/AdepTR/AdepSK/master/AdepSK.sk"
+					execute executor command "sk reload %script's name%"
+					send "%{AdepSK::prefix}% &2Succesfully updated and reloaded! &8(&e%difference between {_systemMS} and current system milliseconds% ms&8)" and "%{AdepSK::prefix}% &2Old version codes have been backed up."
+				else:
+					send "%{AdepSK::prefix}% &cYou're already running with latest version of AdepSK." to executor
+			else if arg-1 is "list":
+				loop loaded yaml:
+					if loop-value contains "AdepSK/Oyuncular/":
+						add last element of (loop-value split at "AdepSK/Oyuncular/") to {_list::*}
+				send {_list::*} to player
+			else:
+				send "%{AdepSK::prefix}% &cInvalid argument." 
+				execute player command "adepsk help"
+		else:
+			send {AdepSK::noPermMSG} to player
