@@ -11,4 +11,4 @@ Required plugins/Skript addons:
 - [Sk-NBeeT](https://github.com/ShaneBeee/Sk-NBeeT/)
 
 I will write a wiki.
-If you need to help, you can come to my discord server: https://discord.gg/C5gE4N5
+If you need to help, you can come to my discord server: https://discord.gg/xxxxxx
